@@ -1,4 +1,289 @@
-<body>
-    123demo
-    
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能问答助手</title>
+    <!-- 引入 Tailwind CSS 库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 引入 Inter 字体强化现代 UI 感 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        /* 自定义滚动条样式，保持界面整洁 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #E5E7EB;
+            border-radius: 20px;
+        }
+
+        /* 思考状态小圆点闪烁动画 */
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col justify-between items-center p-3 sm:p-6">
+
+    <!-- 主容器：卡片式阴影居中布局 -->
+    <div class="w-full max-w-3xl h-full bg-white rounded-2xl shadow-xl shadow-slate-200/50 flex flex-col overflow-hidden border border-slate-100">
+        
+        <!-- 头部 Header -->
+        <header class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-semibold text-lg shadow-md shadow-indigo-200">
+                    ✨
+                </div>
+                <div>
+                    <h1 class="text-base font-semibold text-slate-800">AI 智能助手</h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> 在线 · 实时解答
+                    </p>
+                </div>
+            </div>
+            <!-- 清空对话按钮 -->
+            <button id="clear-btn" class="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                清空对话
+            </button>
+        </header>
+
+        <!-- 对话消息列表展示区域 -->
+        <main id="chat-container" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar">
+            
+            <!-- AI 欢迎气泡 -->
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    AI
+                </div>
+                <div class="bg-slate-100 text-slate-700 px-4 py-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm leading-relaxed shadow-sm">
+                    你好！我是你的 AI 智能助手。你可以问我任何问题，比如编程学习建议、冷知识或日常小提问。
+                </div>
+            </div>
+
+        </main>
+
+        <!-- 底部输入区域 -->
+        <footer class="p-4 border-t border-slate-100 bg-white">
+            
+            <!-- 预置快捷提问标签 -->
+            <div id="quick-questions" class="flex flex-wrap gap-2 mb-3">
+                <button class="quick-tag text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-3 py-1.5 rounded-full transition-all border border-slate-200/60">
+                    💡 如何高效学习编程？
+                </button>
+                <button class="quick-tag text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-3 py-1.5 rounded-full transition-all border border-slate-200/60">
+                    🌌 告诉我一个有趣冷知识
+                </button>
+                <button class="quick-tag text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-3 py-1.5 rounded-full transition-all border border-slate-200/60">
+                    📝 写一段高效工作建议
+                </button>
+            </div>
+
+            <!-- 输入框与发送按钮容器 -->
+            <div class="flex items-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                <textarea 
+                    id="user-input" 
+                    rows="1" 
+                    placeholder="请输入您的问题... (Enter 发送，Shift + Enter 换行)" 
+                    class="w-full bg-transparent border-none outline-none resize-none px-2 py-1.5 text-sm text-slate-700 placeholder-slate-400 max-h-32 min-h-[38px] custom-scrollbar"
+                ></textarea>
+                <button 
+                    id="send-btn" 
+                    class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white p-2 rounded-lg transition-colors flex-shrink-0"
+                    aria-label="Send"
+                >
+                    <svg class="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <p class="text-[11px] text-center text-slate-400 mt-2">AI 可能会产生不准确的信息，请核对重要内容。</p>
+        </footer>
+    </div>
+
+    <!-- 交互逻辑 JS 代码 -->
+    <script>
+        // 获取 DOM 元素
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const quickTags = document.querySelectorAll('.quick-tag');
+
+        // 模拟 AI 回答预设知识库
+        const mockResponses = {
+            "如何高效学习编程？": "学习编程的最佳方式是**“边学边练”**：\n1. **选择一门入门语言**（推荐 Python 或 JavaScript）。\n2. **掌握基础语法**后，立即尝试动手做小项目。\n3. **学会看文档与报错**，培养自主 Debug 能力。\n4. **保持持续练习**，每天写一点代码比周末暴击更有用！",
+            "告诉我一个有趣冷知识": "你知道吗？**虾的心脏其实长在它们的头部**！此外，树懒有时候会误把自己的手臂当作树枝抱上去，然后……摔下来。😄",
+            "写一段高效工作建议": "给你 3 条简单实用的高效工作法：\n1. **番茄工作法**：专注 25 分钟，休息 5 分钟。\n2. **吃掉那只青蛙**：每天优先完成最重要、最难的那项任务。\n3. **定期清理干扰**：关闭不必要的社交软件提醒，保持工作区域整洁。"
+        };
+
+        // 通用模拟回复库（若用户问其他问题）
+        const defaultResponses = [
+            "这是一个非常有意思的问题！从核心机制来看，关键在于建立清晰的结构与逻辑。建议拆解成几个小步骤逐步推进。",
+            "感谢你的提问。总结来说，关键在于持续尝试与优化，遇到不确定的地方可以先进行小范围验证。",
+            "我完全理解你的意思。要实现这一点，通常需要掌握基础知识并辅以一定的实践积累。"
+        ];
+
+        // 自动调整输入框高度
+        userInput.addEventListener('input', () => {
+            userInput.style.height = 'auto';
+            userInput.style.height = Math.min(userInput.scrollHeight, 128) + 'px';
+        });
+
+        // 滚动到底部
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 添加用户消息到界面
+        function appendUserMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start justify-end gap-3';
+            messageDiv.innerHTML = `
+                <div class="bg-indigo-600 text-white px-4 py-3 rounded-2xl rounded-tr-none max-w-[85%] text-sm leading-relaxed shadow-sm whitespace-pre-wrap">${escapeHTML(text)}</div>
+                <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-semibold flex-shrink-0">您</div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // 显示 AI 思考中指示器
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'flex items-start gap-3';
+            typingDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">AI</div>
+                <div class="bg-slate-100 px-4 py-3 rounded-2xl rounded-tl-none text-sm text-slate-500 flex items-center gap-1.5 shadow-sm">
+                    <span class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></span>
+                    <span class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></span>
+                    <span class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></span>
+                </div>
+            `;
+            chatContainer.appendChild(typingDiv);
+            scrollToBottom();
+            return typingDiv;
+        }
+
+        // 模拟打字机输出 AI 消息
+        function appendAiMessageWithTyping(fullText) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start gap-3';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'bg-slate-100 text-slate-700 px-4 py-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm leading-relaxed shadow-sm whitespace-pre-wrap';
+            
+            messageDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">AI</div>
+            `;
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+
+            let index = 0;
+            const timer = setInterval(() => {
+                if (index < fullText.length) {
+                    contentDiv.textContent += fullText.charAt(index);
+                    index++;
+                    scrollToBottom();
+                } else {
+                    clearInterval(timer);
+                }
+            }, 30); // 逐字输出速度（毫秒）
+        }
+
+        // 处理发送消息
+        function handleSend() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // 1. 禁用输入框和发送按钮
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            sendBtn.disabled = true;
+
+            // 2. 显示用户消息
+            appendUserMessage(text);
+
+            // 3. 显示思考动画
+            const typingIndicator = showTypingIndicator();
+
+            // 4. 模拟网络延迟与回复生成 (1.2 秒后回复)
+            setTimeout(() => {
+                // 移除思考指示器
+                if (typingIndicator) typingIndicator.remove();
+
+                // 获取回复文本
+                const replyText = mockResponses[text] || defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+                
+                // 打字机效果呈现
+                appendAiMessageWithTyping(replyText);
+
+                // 恢复发送按钮
+                sendBtn.disabled = false;
+            }, 1200);
+        }
+
+        // 事件监听：点击发送
+        sendBtn.addEventListener('click', handleSend);
+
+        // 事件监听：回车发送（Shift + Enter 换行）
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        });
+
+        // 事件监听：快捷标签点击处理
+        quickTags.forEach(tag => {
+            tag.addEventListener('click', () => {
+                const questionText = tag.innerText.replace(/^[^\s]+\s*/, ''); // 清除 Emoji 简记
+                userInput.value = questionText;
+                handleSend();
+            });
+        });
+
+        // 清空对话功能
+        clearBtn.addEventListener('click', () => {
+            chatContainer.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">AI</div>
+                    <div class="bg-slate-100 text-slate-700 px-4 py-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm leading-relaxed shadow-sm">
+                        对话已重置。请问有什么我可以帮您的？
+                    </div>
+                </div>
+            `;
+        });
+
+        // 简易防止 HTML 注入转义
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+    </script>
 </body>
+</html>
